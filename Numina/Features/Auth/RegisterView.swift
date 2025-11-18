@@ -120,10 +120,14 @@ struct RegisterView: View {
 
                     // Register Button
                     Button(action: {
+                        HapticFeedback.shared.formSubmit()
                         Task {
                             await viewModel.register(email: email, password: password, name: name)
                             if viewModel.isAuthenticated {
+                                HapticFeedback.shared.actionSuccess()
                                 dismiss()
+                            } else if viewModel.errorMessage != nil {
+                                HapticFeedback.shared.actionFailed()
                             }
                         }
                     }) {
@@ -148,6 +152,8 @@ struct RegisterView: View {
                     .cornerRadius(12)
                     .disabled(!isFormValid || viewModel.isLoading)
                     .opacity((isFormValid && !viewModel.isLoading) ? 1.0 : 0.6)
+                    .accessibilityLabel("Create account")
+                    .accessibilityHint(isFormValid ? "Double tap to create account" : "Fill all required fields correctly")
 
                     // Login Link
                     HStack {
@@ -155,6 +161,7 @@ struct RegisterView: View {
                             .foregroundColor(.secondary)
 
                         Button("Log In") {
+                            HapticFeedback.shared.buttonPress()
                             dismiss()
                         }
                         .foregroundColor(.orange)
@@ -168,8 +175,10 @@ struct RegisterView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
+                        HapticFeedback.shared.buttonPress()
                         dismiss()
                     }
+                    .accessibilityLabel("Cancel registration")
                 }
             }
         }

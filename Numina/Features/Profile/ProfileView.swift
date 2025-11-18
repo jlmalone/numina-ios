@@ -10,22 +10,35 @@ import SwiftUI
 struct ProfileView: View {
     @StateObject var viewModel: ProfileViewModel
     @ObservedObject var authViewModel: AuthViewModel
+    @ObservedObject private var networkMonitor = NetworkMonitor.shared
 
     var body: some View {
         NavigationStack {
-            Group {
-                if viewModel.isLoading {
-                    LoadingView()
-                } else if let user = viewModel.user {
-                    profileContent(user: user)
-                } else if let errorMessage = viewModel.errorMessage {
-                    ErrorView(message: errorMessage) {
-                        Task {
-                            await viewModel.loadProfile()
+            VStack(spacing: 0) {
+                OfflineBanner()
+
+                Group {
+                    if viewModel.isLoading {
+                        skeletonLoadingView
+                    } else if let user = viewModel.user {
+                        profileContent(user: user)
+                    } else if let errorMessage = viewModel.errorMessage {
+                        if !networkMonitor.isConnected {
+                            NetworkErrorView {
+                                Task {
+                                    await viewModel.loadProfile()
+                                }
+                            }
+                        } else {
+                            ErrorView(message: errorMessage) {
+                                Task {
+                                    await viewModel.loadProfile()
+                                }
+                            }
                         }
+                    } else {
+                        EmptyProfileView()
                     }
-                } else {
-                    EmptyProfileView()
                 }
             }
             .navigationTitle("Profile")
@@ -33,6 +46,7 @@ struct ProfileView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         Button(action: {
+                            HapticFeedback.shared.buttonPress()
                             viewModel.editProfile()
                         }) {
                             Label("Edit Profile", systemImage: "pencil")
@@ -41,6 +55,7 @@ struct ProfileView: View {
                         Divider()
 
                         Button(role: .destructive, action: {
+                            HapticFeedback.shared.warning()
                             authViewModel.logout()
                         }) {
                             Label("Log Out", systemImage: "rectangle.portrait.and.arrow.right")
@@ -49,6 +64,8 @@ struct ProfileView: View {
                         Image(systemName: "ellipsis.circle")
                             .foregroundColor(.orange)
                     }
+                    .accessibilityLabel("Profile menu")
+                    .accessibilityHint("Opens menu with profile options")
                 }
             }
             .task {
@@ -64,6 +81,12 @@ struct ProfileView: View {
                     )
                 )
             }
+        }
+    }
+
+    private var skeletonLoadingView: some View {
+        ScrollView {
+            SkeletonProfileHeader()
         }
     }
 
