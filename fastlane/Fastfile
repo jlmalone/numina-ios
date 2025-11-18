@@ -1,0 +1,66 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Build and upload to TestFlight"
+  lane :beta do
+    increment_build_number(xcodeproj: "Numina.xcodeproj")
+
+    build_app(
+      scheme: "Numina",
+      export_method: "app-store",
+      export_options: {
+        provisioningProfiles: {
+          "com.numina.app" => "Numina Production"
+        }
+      }
+    )
+
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true
+    )
+  end
+
+  desc "Build and upload to App Store"
+  lane :release do
+    increment_build_number(xcodeproj: "Numina.xcodeproj")
+    increment_version_number(
+      bump_type: "patch",
+      xcodeproj: "Numina.xcodeproj"
+    )
+
+    build_app(
+      scheme: "Numina",
+      export_method: "app-store"
+    )
+
+    upload_to_app_store(
+      submit_for_review: true,
+      automatic_release: false,
+      submission_information: {
+        add_id_info_uses_idfa: false
+      }
+    )
+  end
+
+  desc "Run all tests"
+  lane :test do
+    run_tests(
+      scheme: "Numina",
+      devices: ["iPhone 15 Pro"],
+      clean: true
+    )
+  end
+
+  desc "Take screenshots"
+  lane :screenshots do
+    capture_screenshots(
+      scheme: "Numina",
+      devices: [
+        "iPhone 15 Pro Max",
+        "iPhone 15 Pro",
+        "iPhone 15",
+        "iPad Pro (12.9-inch) (6th generation)"
+      ]
+    )
+  end
+end
