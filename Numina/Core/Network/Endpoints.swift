@@ -14,26 +14,13 @@ enum APIEndpoint {
     case updateCurrentUser
     case getClasses(filters: ClassFilters?)
     case getClassDetails(id: String)
-    case registerDevice
-    case getNotificationHistory
-    case markNotificationRead(id: String)
-    case getNotificationPreferences
-    case updateNotificationPreferences
-
-    // Groups
-    case getGroups(filters: GroupFilters?)
-    case getGroupDetails(id: String)
-    case createGroup
-    case joinGroup(id: String)
-    case leaveGroup(id: String)
-    case getGroupMembers(id: String)
-    case inviteMember(groupId: String)
-
-    // Group Activities
-    case getGroupActivities(groupId: String)
-    case getActivityDetails(groupId: String, activityId: String)
-    case createActivity(groupId: String)
-    case rsvpActivity(groupId: String, activityId: String)
+    case getReviews(classId: String, sort: String?, page: Int?, limit: Int?)
+    case createReview(classId: String)
+    case updateReview(reviewId: String)
+    case deleteReview(reviewId: String)
+    case markReviewHelpful(reviewId: String)
+    case getMyReviews
+    case getPendingReviews
 
     var path: String {
         switch self {
@@ -49,27 +36,33 @@ enum APIEndpoint {
             return "/api/v1/classes"
         case .getClassDetails(let id):
             return "/api/v1/classes/\(id)"
-        case .registerDevice:
-            return "/api/v1/notifications/register-device"
-        case .getNotificationHistory:
-            return "/api/v1/notifications/history"
-        case .markNotificationRead(let id):
-            return "/api/v1/notifications/\(id)/mark-read"
-        case .getNotificationPreferences:
-            return "/api/v1/notifications/preferences"
-        case .updateNotificationPreferences:
-            return "/api/v1/notifications/preferences"
+        case .getReviews(let classId, _, _, _):
+            return "/api/v1/reviews/classes/\(classId)"
+        case .createReview(let classId):
+            return "/api/v1/reviews/classes/\(classId)"
+        case .updateReview(let reviewId):
+            return "/api/v1/reviews/\(reviewId)"
+        case .deleteReview(let reviewId):
+            return "/api/v1/reviews/\(reviewId)"
+        case .markReviewHelpful(let reviewId):
+            return "/api/v1/reviews/\(reviewId)/helpful"
+        case .getMyReviews:
+            return "/api/v1/reviews/my-reviews"
+        case .getPendingReviews:
+            return "/api/v1/reviews/pending"
         }
     }
 
     var method: HTTPMethod {
         switch self {
-        case .register, .login, .registerDevice, .markNotificationRead:
+        case .register, .login, .createReview, .markReviewHelpful:
             return .post
-        case .getCurrentUser, .getClasses, .getClassDetails, .getNotificationHistory, .getNotificationPreferences:
+        case .getCurrentUser, .getClasses, .getClassDetails, .getReviews, .getMyReviews, .getPendingReviews:
             return .get
-        case .updateCurrentUser, .updateNotificationPreferences:
+        case .updateCurrentUser, .updateReview:
             return .put
+        case .deleteReview:
+            return .delete
         }
     }
 
@@ -77,6 +70,18 @@ enum APIEndpoint {
         switch self {
         case .getClasses(let filters):
             return filters?.toQueryItems()
+        case .getReviews(_, let sort, let page, let limit):
+            var items: [URLQueryItem] = []
+            if let sort = sort {
+                items.append(URLQueryItem(name: "sort", value: sort))
+            }
+            if let page = page {
+                items.append(URLQueryItem(name: "page", value: String(page)))
+            }
+            if let limit = limit {
+                items.append(URLQueryItem(name: "limit", value: String(limit)))
+            }
+            return items.isEmpty ? nil : items
         default:
             return nil
         }
