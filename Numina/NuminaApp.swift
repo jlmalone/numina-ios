@@ -13,6 +13,8 @@ struct NuminaApp: App {
     @StateObject private var authViewModel: AuthViewModel
     @StateObject private var classViewModel: ClassViewModel
     @StateObject private var profileViewModel: ProfileViewModel
+    @StateObject private var feedViewModel: FeedViewModel
+    @StateObject private var discoverViewModel: DiscoverViewModel
 
     let modelContainer: ModelContainer
 
@@ -22,7 +24,10 @@ struct NuminaApp: App {
             let schema = Schema([
                 User.self,
                 FitnessClass.self,
-                AvailabilitySlot.self
+                AvailabilitySlot.self,
+                Activity.self,
+                Comment.self,
+                SocialProfile.self
             ])
             let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
             modelContainer = try ModelContainer(for: schema, configurations: [modelConfiguration])
@@ -34,15 +39,20 @@ struct NuminaApp: App {
         let modelContext = ModelContext(modelContainer)
         let userRepository = UserRepository(modelContext: modelContext)
         let classRepository = ClassRepository(modelContext: modelContext)
+        let socialRepository = SocialRepository(modelContext: modelContext)
 
         // Initialize view models
         let authVM = AuthViewModel(userRepository: userRepository)
         let classVM = ClassViewModel(classRepository: classRepository)
         let profileVM = ProfileViewModel(userRepository: userRepository)
+        let feedVM = FeedViewModel(socialRepository: socialRepository)
+        let discoverVM = DiscoverViewModel(socialRepository: socialRepository)
 
         _authViewModel = StateObject(wrappedValue: authVM)
         _classViewModel = StateObject(wrappedValue: classVM)
         _profileViewModel = StateObject(wrappedValue: profileVM)
+        _feedViewModel = StateObject(wrappedValue: feedVM)
+        _discoverViewModel = StateObject(wrappedValue: discoverVM)
     }
 
     var body: some Scene {
@@ -50,7 +60,9 @@ struct NuminaApp: App {
             ContentView(
                 authViewModel: authViewModel,
                 classViewModel: classViewModel,
-                profileViewModel: profileViewModel
+                profileViewModel: profileViewModel,
+                feedViewModel: feedViewModel,
+                discoverViewModel: discoverViewModel
             )
             .modelContainer(modelContainer)
         }
@@ -61,6 +73,8 @@ struct ContentView: View {
     @ObservedObject var authViewModel: AuthViewModel
     @ObservedObject var classViewModel: ClassViewModel
     @ObservedObject var profileViewModel: ProfileViewModel
+    @ObservedObject var feedViewModel: FeedViewModel
+    @ObservedObject var discoverViewModel: DiscoverViewModel
 
     @State private var showingOnboarding = false
 
@@ -79,14 +93,18 @@ struct ContentView: View {
                         MainTabView(
                             authViewModel: authViewModel,
                             classViewModel: classViewModel,
-                            profileViewModel: profileViewModel
+                            profileViewModel: profileViewModel,
+                            feedViewModel: feedViewModel,
+                            discoverViewModel: discoverViewModel
                         )
                     }
                 } else {
                     MainTabView(
                         authViewModel: authViewModel,
                         classViewModel: classViewModel,
-                        profileViewModel: profileViewModel
+                        profileViewModel: profileViewModel,
+                        feedViewModel: feedViewModel,
+                        discoverViewModel: discoverViewModel
                     )
                 }
             } else {
@@ -107,12 +125,24 @@ struct MainTabView: View {
     @ObservedObject var authViewModel: AuthViewModel
     @ObservedObject var classViewModel: ClassViewModel
     @ObservedObject var profileViewModel: ProfileViewModel
+    @ObservedObject var feedViewModel: FeedViewModel
+    @ObservedObject var discoverViewModel: DiscoverViewModel
 
     var body: some View {
         TabView {
+            FeedView(viewModel: feedViewModel)
+                .tabItem {
+                    Label("Feed", systemImage: "newspaper.fill")
+                }
+
             ClassListView(viewModel: classViewModel)
                 .tabItem {
-                    Label("Discover", systemImage: "magnifyingglass")
+                    Label("Classes", systemImage: "figure.run")
+                }
+
+            DiscoverUsersView(viewModel: discoverViewModel)
+                .tabItem {
+                    Label("Discover", systemImage: "person.2.fill")
                 }
 
             ProfileView(
@@ -131,6 +161,8 @@ struct MainTabView: View {
     ContentView(
         authViewModel: AuthViewModel(userRepository: UserRepository()),
         classViewModel: ClassViewModel(classRepository: ClassRepository()),
-        profileViewModel: ProfileViewModel(userRepository: UserRepository())
+        profileViewModel: ProfileViewModel(userRepository: UserRepository()),
+        feedViewModel: FeedViewModel(socialRepository: SocialRepository()),
+        discoverViewModel: DiscoverViewModel(socialRepository: SocialRepository())
     )
 }

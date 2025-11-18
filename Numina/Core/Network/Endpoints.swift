@@ -15,6 +15,19 @@ enum APIEndpoint {
     case getClasses(filters: ClassFilters?)
     case getClassDetails(id: String)
 
+    // Social endpoints
+    case getFeed(page: Int, limit: Int)
+    case followUser(userId: String)
+    case unfollowUser(userId: String)
+    case discoverUsers(filters: UserSearchFilters?)
+    case getUserProfile(userId: String)
+    case likeActivity(activityId: String)
+    case unlikeActivity(activityId: String)
+    case commentOnActivity(activityId: String)
+    case getActivityComments(activityId: String)
+    case getFollowers(userId: String)
+    case getFollowing(userId: String)
+
     var path: String {
         switch self {
         case .register:
@@ -29,6 +42,30 @@ enum APIEndpoint {
             return "/api/v1/classes"
         case .getClassDetails(let id):
             return "/api/v1/classes/\(id)"
+
+        // Social paths
+        case .getFeed:
+            return "/api/v1/social/feed"
+        case .followUser(let userId):
+            return "/api/v1/social/follow/\(userId)"
+        case .unfollowUser(let userId):
+            return "/api/v1/social/unfollow/\(userId)"
+        case .discoverUsers:
+            return "/api/v1/social/discover-users"
+        case .getUserProfile(let userId):
+            return "/api/v1/social/users/\(userId)/profile"
+        case .likeActivity(let activityId):
+            return "/api/v1/social/activity/\(activityId)/like"
+        case .unlikeActivity(let activityId):
+            return "/api/v1/social/activity/\(activityId)/like"
+        case .commentOnActivity(let activityId):
+            return "/api/v1/social/activity/\(activityId)/comment"
+        case .getActivityComments(let activityId):
+            return "/api/v1/social/activity/\(activityId)/comments"
+        case .getFollowers(let userId):
+            return "/api/v1/social/users/\(userId)/followers"
+        case .getFollowing(let userId):
+            return "/api/v1/social/users/\(userId)/following"
         }
     }
 
@@ -40,12 +77,27 @@ enum APIEndpoint {
             return .get
         case .updateCurrentUser:
             return .put
+
+        // Social methods
+        case .getFeed, .discoverUsers, .getUserProfile, .getActivityComments, .getFollowers, .getFollowing:
+            return .get
+        case .followUser, .likeActivity, .commentOnActivity:
+            return .post
+        case .unfollowUser, .unlikeActivity:
+            return .delete
         }
     }
 
     func queryItems(filters: ClassFilters?) -> [URLQueryItem]? {
         switch self {
         case .getClasses(let filters):
+            return filters?.toQueryItems()
+        case .getFeed(let page, let limit):
+            return [
+                URLQueryItem(name: "page", value: String(page)),
+                URLQueryItem(name: "limit", value: String(limit))
+            ]
+        case .discoverUsers(let filters):
             return filters?.toQueryItems()
         default:
             return nil
@@ -108,6 +160,33 @@ struct ClassFilters {
         if let limit = limit {
             items.append(URLQueryItem(name: "limit", value: String(limit)))
         }
+
+        return items
+    }
+}
+
+// MARK: - User Search Filters Extension
+
+extension UserSearchFilters {
+    func toQueryItems() -> [URLQueryItem] {
+        var items: [URLQueryItem] = []
+
+        if let query = query, !query.isEmpty {
+            items.append(URLQueryItem(name: "query", value: query))
+        }
+        if let interests = fitnessInterests, !interests.isEmpty {
+            items.append(URLQueryItem(name: "interests", value: interests.joined(separator: ",")))
+        }
+        if let level = fitnessLevel {
+            items.append(URLQueryItem(name: "fitnessLevel", value: String(level)))
+        }
+        if let location = location {
+            items.append(URLQueryItem(name: "lat", value: String(location.latitude)))
+            items.append(URLQueryItem(name: "lon", value: String(location.longitude)))
+            items.append(URLQueryItem(name: "radius", value: String(location.radiusMiles)))
+        }
+        items.append(URLQueryItem(name: "page", value: String(page)))
+        items.append(URLQueryItem(name: "limit", value: String(limit)))
 
         return items
     }
