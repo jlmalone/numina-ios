@@ -96,6 +96,8 @@ final class APIClient {
         // Add query parameters if needed
         if case .getClasses(let filters) = endpoint {
             urlComponents.queryItems = endpoint.queryItems(filters: filters)
+        } else if case .getReviews = endpoint {
+            urlComponents.queryItems = endpoint.queryItems(filters: nil)
         }
 
         guard let url = urlComponents.url else {
