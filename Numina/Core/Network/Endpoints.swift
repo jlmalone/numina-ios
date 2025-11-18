@@ -14,6 +14,11 @@ enum APIEndpoint {
     case updateCurrentUser
     case getClasses(filters: ClassFilters?)
     case getClassDetails(id: String)
+    case registerDevice
+    case getNotificationHistory
+    case markNotificationRead(id: String)
+    case getNotificationPreferences
+    case updateNotificationPreferences
 
     var path: String {
         switch self {
@@ -29,16 +34,26 @@ enum APIEndpoint {
             return "/api/v1/classes"
         case .getClassDetails(let id):
             return "/api/v1/classes/\(id)"
+        case .registerDevice:
+            return "/api/v1/notifications/register-device"
+        case .getNotificationHistory:
+            return "/api/v1/notifications/history"
+        case .markNotificationRead(let id):
+            return "/api/v1/notifications/\(id)/mark-read"
+        case .getNotificationPreferences:
+            return "/api/v1/notifications/preferences"
+        case .updateNotificationPreferences:
+            return "/api/v1/notifications/preferences"
         }
     }
 
     var method: HTTPMethod {
         switch self {
-        case .register, .login:
+        case .register, .login, .registerDevice, .markNotificationRead:
             return .post
-        case .getCurrentUser, .getClasses, .getClassDetails:
+        case .getCurrentUser, .getClasses, .getClassDetails, .getNotificationHistory, .getNotificationPreferences:
             return .get
-        case .updateCurrentUser:
+        case .updateCurrentUser, .updateNotificationPreferences:
             return .put
         }
     }
