@@ -13,6 +13,7 @@ struct NuminaApp: App {
     @StateObject private var authViewModel: AuthViewModel
     @StateObject private var classViewModel: ClassViewModel
     @StateObject private var profileViewModel: ProfileViewModel
+    @StateObject private var messagesViewModel: MessagesViewModel
 
     let modelContainer: ModelContainer
 
@@ -22,7 +23,9 @@ struct NuminaApp: App {
             let schema = Schema([
                 User.self,
                 FitnessClass.self,
-                AvailabilitySlot.self
+                AvailabilitySlot.self,
+                Message.self,
+                Conversation.self
             ])
             let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
             modelContainer = try ModelContainer(for: schema, configurations: [modelConfiguration])
@@ -34,15 +37,18 @@ struct NuminaApp: App {
         let modelContext = ModelContext(modelContainer)
         let userRepository = UserRepository(modelContext: modelContext)
         let classRepository = ClassRepository(modelContext: modelContext)
+        let messageRepository = MessageRepository(modelContext: modelContext)
 
         // Initialize view models
         let authVM = AuthViewModel(userRepository: userRepository)
         let classVM = ClassViewModel(classRepository: classRepository)
         let profileVM = ProfileViewModel(userRepository: userRepository)
+        let messagesVM = MessagesViewModel(messageRepository: messageRepository)
 
         _authViewModel = StateObject(wrappedValue: authVM)
         _classViewModel = StateObject(wrappedValue: classVM)
         _profileViewModel = StateObject(wrappedValue: profileVM)
+        _messagesViewModel = StateObject(wrappedValue: messagesVM)
     }
 
     var body: some Scene {
@@ -50,7 +56,8 @@ struct NuminaApp: App {
             ContentView(
                 authViewModel: authViewModel,
                 classViewModel: classViewModel,
-                profileViewModel: profileViewModel
+                profileViewModel: profileViewModel,
+                messagesViewModel: messagesViewModel
             )
             .modelContainer(modelContainer)
         }
@@ -61,6 +68,7 @@ struct ContentView: View {
     @ObservedObject var authViewModel: AuthViewModel
     @ObservedObject var classViewModel: ClassViewModel
     @ObservedObject var profileViewModel: ProfileViewModel
+    @ObservedObject var messagesViewModel: MessagesViewModel
 
     @State private var showingOnboarding = false
 
@@ -79,14 +87,16 @@ struct ContentView: View {
                         MainTabView(
                             authViewModel: authViewModel,
                             classViewModel: classViewModel,
-                            profileViewModel: profileViewModel
+                            profileViewModel: profileViewModel,
+                            messagesViewModel: messagesViewModel
                         )
                     }
                 } else {
                     MainTabView(
                         authViewModel: authViewModel,
                         classViewModel: classViewModel,
-                        profileViewModel: profileViewModel
+                        profileViewModel: profileViewModel,
+                        messagesViewModel: messagesViewModel
                     )
                 }
             } else {
@@ -107,6 +117,7 @@ struct MainTabView: View {
     @ObservedObject var authViewModel: AuthViewModel
     @ObservedObject var classViewModel: ClassViewModel
     @ObservedObject var profileViewModel: ProfileViewModel
+    @ObservedObject var messagesViewModel: MessagesViewModel
 
     var body: some View {
         TabView {
@@ -114,6 +125,12 @@ struct MainTabView: View {
                 .tabItem {
                     Label("Discover", systemImage: "magnifyingglass")
                 }
+
+            MessagesView(viewModel: messagesViewModel)
+                .tabItem {
+                    Label("Messages", systemImage: "bubble.left.and.bubble.right.fill")
+                }
+                .badge(messagesViewModel.totalUnreadCount > 0 ? messagesViewModel.totalUnreadCount : 0)
 
             ProfileView(
                 viewModel: profileViewModel,
@@ -131,6 +148,7 @@ struct MainTabView: View {
     ContentView(
         authViewModel: AuthViewModel(userRepository: UserRepository()),
         classViewModel: ClassViewModel(classRepository: ClassRepository()),
-        profileViewModel: ProfileViewModel(userRepository: UserRepository())
+        profileViewModel: ProfileViewModel(userRepository: UserRepository()),
+        messagesViewModel: MessagesViewModel(messageRepository: MessageRepository())
     )
 }

@@ -15,6 +15,15 @@ enum APIEndpoint {
     case getClasses(filters: ClassFilters?)
     case getClassDetails(id: String)
 
+    // Messaging endpoints
+    case getConversations
+    case getConversation(id: String)
+    case getMessages(conversationId: String)
+    case sendMessage
+    case createConversation
+    case deleteConversation(id: String)
+    case searchUsers(query: String)
+
     var path: String {
         switch self {
         case .register:
@@ -29,17 +38,33 @@ enum APIEndpoint {
             return "/api/v1/classes"
         case .getClassDetails(let id):
             return "/api/v1/classes/\(id)"
+        case .getConversations:
+            return "/api/v1/messages/conversations"
+        case .getConversation(let id):
+            return "/api/v1/messages/conversations/\(id)"
+        case .getMessages(let conversationId):
+            return "/api/v1/messages/conversations/\(conversationId)/messages"
+        case .sendMessage:
+            return "/api/v1/messages/send"
+        case .createConversation:
+            return "/api/v1/messages/conversations"
+        case .deleteConversation(let id):
+            return "/api/v1/messages/conversations/\(id)"
+        case .searchUsers(let query):
+            return "/api/v1/users/search?q=\(query)"
         }
     }
 
     var method: HTTPMethod {
         switch self {
-        case .register, .login:
+        case .register, .login, .sendMessage, .createConversation:
             return .post
-        case .getCurrentUser, .getClasses, .getClassDetails:
+        case .getCurrentUser, .getClasses, .getClassDetails, .getConversations, .getConversation, .getMessages, .searchUsers:
             return .get
         case .updateCurrentUser:
             return .put
+        case .deleteConversation:
+            return .delete
         }
     }
 
