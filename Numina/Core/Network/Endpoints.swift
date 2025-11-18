@@ -15,14 +15,20 @@ enum APIEndpoint {
     case getClasses(filters: ClassFilters?)
     case getClassDetails(id: String)
 
-    // Messaging endpoints
-    case getConversations
-    case getConversation(id: String)
-    case getMessages(conversationId: String)
-    case sendMessage
-    case createConversation
-    case deleteConversation(id: String)
-    case searchUsers(query: String)
+    // Groups
+    case getGroups(filters: GroupFilters?)
+    case getGroupDetails(id: String)
+    case createGroup
+    case joinGroup(id: String)
+    case leaveGroup(id: String)
+    case getGroupMembers(id: String)
+    case inviteMember(groupId: String)
+
+    // Group Activities
+    case getGroupActivities(groupId: String)
+    case getActivityDetails(groupId: String, activityId: String)
+    case createActivity(groupId: String)
+    case rsvpActivity(groupId: String, activityId: String)
 
     var path: String {
         switch self {
@@ -38,39 +44,54 @@ enum APIEndpoint {
             return "/api/v1/classes"
         case .getClassDetails(let id):
             return "/api/v1/classes/\(id)"
-        case .getConversations:
-            return "/api/v1/messages/conversations"
-        case .getConversation(let id):
-            return "/api/v1/messages/conversations/\(id)"
-        case .getMessages(let conversationId):
-            return "/api/v1/messages/conversations/\(conversationId)/messages"
-        case .sendMessage:
-            return "/api/v1/messages/send"
-        case .createConversation:
-            return "/api/v1/messages/conversations"
-        case .deleteConversation(let id):
-            return "/api/v1/messages/conversations/\(id)"
-        case .searchUsers(let query):
-            return "/api/v1/users/search?q=\(query)"
+        case .getGroups:
+            return "/api/v1/groups"
+        case .getGroupDetails(let id):
+            return "/api/v1/groups/\(id)"
+        case .createGroup:
+            return "/api/v1/groups"
+        case .joinGroup(let id):
+            return "/api/v1/groups/\(id)/join"
+        case .leaveGroup(let id):
+            return "/api/v1/groups/\(id)/leave"
+        case .getGroupMembers(let id):
+            return "/api/v1/groups/\(id)/members"
+        case .inviteMember(let groupId):
+            return "/api/v1/groups/\(groupId)/invite"
+        case .getGroupActivities(let groupId):
+            return "/api/v1/groups/\(groupId)/activities"
+        case .getActivityDetails(let groupId, let activityId):
+            return "/api/v1/groups/\(groupId)/activities/\(activityId)"
+        case .createActivity(let groupId):
+            return "/api/v1/groups/\(groupId)/activities"
+        case .rsvpActivity(let groupId, let activityId):
+            return "/api/v1/groups/\(groupId)/activities/\(activityId)/rsvp"
         }
     }
 
     var method: HTTPMethod {
         switch self {
-        case .register, .login, .sendMessage, .createConversation:
+        case .register, .login, .createGroup, .joinGroup, .leaveGroup, .inviteMember, .createActivity, .rsvpActivity:
             return .post
-        case .getCurrentUser, .getClasses, .getClassDetails, .getConversations, .getConversation, .getMessages, .searchUsers:
+        case .getCurrentUser, .getClasses, .getClassDetails, .getGroups, .getGroupDetails, .getGroupMembers, .getGroupActivities, .getActivityDetails:
             return .get
         case .updateCurrentUser:
             return .put
-        case .deleteConversation:
-            return .delete
         }
     }
 
     func queryItems(filters: ClassFilters?) -> [URLQueryItem]? {
         switch self {
         case .getClasses(let filters):
+            return filters?.toQueryItems()
+        default:
+            return nil
+        }
+    }
+
+    func queryItems(filters: GroupFilters?) -> [URLQueryItem]? {
+        switch self {
+        case .getGroups(let filters):
             return filters?.toQueryItems()
         default:
             return nil
@@ -126,6 +147,58 @@ struct ClassFilters {
         }
         if let max = maxPrice {
             items.append(URLQueryItem(name: "maxPrice", value: String(max)))
+        }
+        if let page = page {
+            items.append(URLQueryItem(name: "page", value: String(page)))
+        }
+        if let limit = limit {
+            items.append(URLQueryItem(name: "limit", value: String(limit)))
+        }
+
+        return items
+    }
+}
+
+// MARK: - Group Filters
+
+struct GroupFilters {
+    var category: String?
+    var search: String?
+    var locationRadius: Double?
+    var latitude: Double?
+    var longitude: Double?
+    var minSize: Int?
+    var maxSize: Int?
+    var privacy: String? // public, private
+    var page: Int?
+    var limit: Int?
+
+    func toQueryItems() -> [URLQueryItem] {
+        var items: [URLQueryItem] = []
+
+        if let category = category, !category.isEmpty {
+            items.append(URLQueryItem(name: "category", value: category))
+        }
+        if let search = search, !search.isEmpty {
+            items.append(URLQueryItem(name: "search", value: search))
+        }
+        if let radius = locationRadius {
+            items.append(URLQueryItem(name: "radius", value: String(radius)))
+        }
+        if let lat = latitude {
+            items.append(URLQueryItem(name: "lat", value: String(lat)))
+        }
+        if let lon = longitude {
+            items.append(URLQueryItem(name: "lon", value: String(lon)))
+        }
+        if let minSize = minSize {
+            items.append(URLQueryItem(name: "minSize", value: String(minSize)))
+        }
+        if let maxSize = maxSize {
+            items.append(URLQueryItem(name: "maxSize", value: String(maxSize)))
+        }
+        if let privacy = privacy, !privacy.isEmpty {
+            items.append(URLQueryItem(name: "privacy", value: privacy))
         }
         if let page = page {
             items.append(URLQueryItem(name: "page", value: String(page)))

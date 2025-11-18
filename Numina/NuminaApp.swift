@@ -13,7 +13,7 @@ struct NuminaApp: App {
     @StateObject private var authViewModel: AuthViewModel
     @StateObject private var classViewModel: ClassViewModel
     @StateObject private var profileViewModel: ProfileViewModel
-    @StateObject private var messagesViewModel: MessagesViewModel
+    @StateObject private var groupsViewModel: GroupsViewModel
 
     let modelContainer: ModelContainer
 
@@ -24,8 +24,9 @@ struct NuminaApp: App {
                 User.self,
                 FitnessClass.self,
                 AvailabilitySlot.self,
-                Message.self,
-                Conversation.self
+                Group.self,
+                GroupMember.self,
+                GroupActivity.self
             ])
             let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
             modelContainer = try ModelContainer(for: schema, configurations: [modelConfiguration])
@@ -37,18 +38,18 @@ struct NuminaApp: App {
         let modelContext = ModelContext(modelContainer)
         let userRepository = UserRepository(modelContext: modelContext)
         let classRepository = ClassRepository(modelContext: modelContext)
-        let messageRepository = MessageRepository(modelContext: modelContext)
+        let groupRepository = GroupRepository(modelContext: modelContext)
 
         // Initialize view models
         let authVM = AuthViewModel(userRepository: userRepository)
         let classVM = ClassViewModel(classRepository: classRepository)
         let profileVM = ProfileViewModel(userRepository: userRepository)
-        let messagesVM = MessagesViewModel(messageRepository: messageRepository)
+        let groupsVM = GroupsViewModel(groupRepository: groupRepository)
 
         _authViewModel = StateObject(wrappedValue: authVM)
         _classViewModel = StateObject(wrappedValue: classVM)
         _profileViewModel = StateObject(wrappedValue: profileVM)
-        _messagesViewModel = StateObject(wrappedValue: messagesVM)
+        _groupsViewModel = StateObject(wrappedValue: groupsVM)
     }
 
     var body: some Scene {
@@ -57,7 +58,7 @@ struct NuminaApp: App {
                 authViewModel: authViewModel,
                 classViewModel: classViewModel,
                 profileViewModel: profileViewModel,
-                messagesViewModel: messagesViewModel
+                groupsViewModel: groupsViewModel
             )
             .modelContainer(modelContainer)
         }
@@ -68,7 +69,7 @@ struct ContentView: View {
     @ObservedObject var authViewModel: AuthViewModel
     @ObservedObject var classViewModel: ClassViewModel
     @ObservedObject var profileViewModel: ProfileViewModel
-    @ObservedObject var messagesViewModel: MessagesViewModel
+    @ObservedObject var groupsViewModel: GroupsViewModel
 
     @State private var showingOnboarding = false
 
@@ -88,7 +89,7 @@ struct ContentView: View {
                             authViewModel: authViewModel,
                             classViewModel: classViewModel,
                             profileViewModel: profileViewModel,
-                            messagesViewModel: messagesViewModel
+                            groupsViewModel: groupsViewModel
                         )
                     }
                 } else {
@@ -96,7 +97,7 @@ struct ContentView: View {
                         authViewModel: authViewModel,
                         classViewModel: classViewModel,
                         profileViewModel: profileViewModel,
-                        messagesViewModel: messagesViewModel
+                        groupsViewModel: groupsViewModel
                     )
                 }
             } else {
@@ -117,7 +118,7 @@ struct MainTabView: View {
     @ObservedObject var authViewModel: AuthViewModel
     @ObservedObject var classViewModel: ClassViewModel
     @ObservedObject var profileViewModel: ProfileViewModel
-    @ObservedObject var messagesViewModel: MessagesViewModel
+    @ObservedObject var groupsViewModel: GroupsViewModel
 
     var body: some View {
         TabView {
@@ -126,11 +127,10 @@ struct MainTabView: View {
                     Label("Discover", systemImage: "magnifyingglass")
                 }
 
-            MessagesView(viewModel: messagesViewModel)
+            GroupsView(viewModel: groupsViewModel)
                 .tabItem {
-                    Label("Messages", systemImage: "bubble.left.and.bubble.right.fill")
+                    Label("Groups", systemImage: "person.3.fill")
                 }
-                .badge(messagesViewModel.totalUnreadCount > 0 ? messagesViewModel.totalUnreadCount : 0)
 
             ProfileView(
                 viewModel: profileViewModel,
@@ -149,6 +149,6 @@ struct MainTabView: View {
         authViewModel: AuthViewModel(userRepository: UserRepository()),
         classViewModel: ClassViewModel(classRepository: ClassRepository()),
         profileViewModel: ProfileViewModel(userRepository: UserRepository()),
-        messagesViewModel: MessagesViewModel(messageRepository: MessageRepository())
+        groupsViewModel: GroupsViewModel(groupRepository: GroupRepository())
     )
 }
