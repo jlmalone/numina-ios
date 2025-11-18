@@ -7,13 +7,16 @@
 
 import SwiftUI
 import SwiftData
+import UserNotifications
 
 @main
 struct NuminaApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var authViewModel: AuthViewModel
     @StateObject private var classViewModel: ClassViewModel
     @StateObject private var profileViewModel: ProfileViewModel
-    @StateObject private var groupsViewModel: GroupsViewModel
+    @StateObject private var notificationService: NotificationService
+    @StateObject private var notificationsViewModel: NotificationsViewModel
 
     let modelContainer: ModelContainer
 
@@ -24,9 +27,7 @@ struct NuminaApp: App {
                 User.self,
                 FitnessClass.self,
                 AvailabilitySlot.self,
-                Group.self,
-                GroupMember.self,
-                GroupActivity.self
+                AppNotification.self
             ])
             let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
             modelContainer = try ModelContainer(for: schema, configurations: [modelConfiguration])
@@ -44,12 +45,17 @@ struct NuminaApp: App {
         let authVM = AuthViewModel(userRepository: userRepository)
         let classVM = ClassViewModel(classRepository: classRepository)
         let profileVM = ProfileViewModel(userRepository: userRepository)
-        let groupsVM = GroupsViewModel(groupRepository: groupRepository)
+        let notificationSvc = NotificationService(modelContext: modelContext)
+        let notificationsVM = NotificationsViewModel(modelContext: modelContext)
 
         _authViewModel = StateObject(wrappedValue: authVM)
         _classViewModel = StateObject(wrappedValue: classVM)
         _profileViewModel = StateObject(wrappedValue: profileVM)
-        _groupsViewModel = StateObject(wrappedValue: groupsVM)
+        _notificationService = StateObject(wrappedValue: notificationSvc)
+        _notificationsViewModel = StateObject(wrappedValue: notificationsVM)
+
+        // Set notification service in app delegate
+        AppDelegate.notificationService = notificationSvc
     }
 
     var body: some Scene {
@@ -58,7 +64,8 @@ struct NuminaApp: App {
                 authViewModel: authViewModel,
                 classViewModel: classViewModel,
                 profileViewModel: profileViewModel,
-                groupsViewModel: groupsViewModel
+                notificationService: notificationService,
+                notificationsViewModel: notificationsViewModel
             )
             .modelContainer(modelContainer)
         }
@@ -69,7 +76,8 @@ struct ContentView: View {
     @ObservedObject var authViewModel: AuthViewModel
     @ObservedObject var classViewModel: ClassViewModel
     @ObservedObject var profileViewModel: ProfileViewModel
-    @ObservedObject var groupsViewModel: GroupsViewModel
+    @ObservedObject var notificationService: NotificationService
+    @ObservedObject var notificationsViewModel: NotificationsViewModel
 
     @State private var showingOnboarding = false
 
@@ -89,7 +97,8 @@ struct ContentView: View {
                             authViewModel: authViewModel,
                             classViewModel: classViewModel,
                             profileViewModel: profileViewModel,
-                            groupsViewModel: groupsViewModel
+                            notificationService: notificationService,
+                            notificationsViewModel: notificationsViewModel
                         )
                     }
                 } else {
@@ -97,7 +106,8 @@ struct ContentView: View {
                         authViewModel: authViewModel,
                         classViewModel: classViewModel,
                         profileViewModel: profileViewModel,
-                        groupsViewModel: groupsViewModel
+                        notificationService: notificationService,
+                        notificationsViewModel: notificationsViewModel
                     )
                 }
             } else {
@@ -118,7 +128,8 @@ struct MainTabView: View {
     @ObservedObject var authViewModel: AuthViewModel
     @ObservedObject var classViewModel: ClassViewModel
     @ObservedObject var profileViewModel: ProfileViewModel
-    @ObservedObject var groupsViewModel: GroupsViewModel
+    @ObservedObject var notificationService: NotificationService
+    @ObservedObject var notificationsViewModel: NotificationsViewModel
 
     var body: some View {
         TabView {
@@ -127,10 +138,14 @@ struct MainTabView: View {
                     Label("Discover", systemImage: "magnifyingglass")
                 }
 
-            GroupsView(viewModel: groupsViewModel)
-                .tabItem {
-                    Label("Groups", systemImage: "person.3.fill")
-                }
+            NotificationsView(
+                viewModel: notificationsViewModel,
+                notificationService: notificationService
+            )
+            .tabItem {
+                Label("Notifications", systemImage: "bell.fill")
+            }
+            .badge(notificationsViewModel.unreadCount > 0 ? notificationsViewModel.unreadCount : nil)
 
             ProfileView(
                 viewModel: profileViewModel,
@@ -144,11 +159,44 @@ struct MainTabView: View {
     }
 }
 
+// MARK: - App Delegate
+
+class AppDelegate: NSObject, UIApplicationDelegate {
+    static var notificationService: NotificationService?
+
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+    ) -> Bool {
+        return true
+    }
+
+    func application(
+        _ application: UIApplication,
+        didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
+    ) {
+        Task { @MainActor in
+            AppDelegate.notificationService?.didRegisterForRemoteNotifications(withDeviceToken: deviceToken)
+        }
+    }
+
+    func application(
+        _ application: UIApplication,
+        didFailToRegisterForRemoteNotificationsWithError error: Error
+    ) {
+        Task { @MainActor in
+            AppDelegate.notificationService?.didFailToRegisterForRemoteNotifications(withError: error)
+        }
+    }
+}
+
 #Preview {
+    let modelContext = ModelContext(try! ModelContainer(for: User.self, FitnessClass.self, AppNotification.self))
     ContentView(
         authViewModel: AuthViewModel(userRepository: UserRepository()),
         classViewModel: ClassViewModel(classRepository: ClassRepository()),
         profileViewModel: ProfileViewModel(userRepository: UserRepository()),
-        groupsViewModel: GroupsViewModel(groupRepository: GroupRepository())
+        notificationService: NotificationService(modelContext: modelContext),
+        notificationsViewModel: NotificationsViewModel(modelContext: modelContext)
     )
 }

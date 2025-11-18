@@ -14,6 +14,11 @@ enum APIEndpoint {
     case updateCurrentUser
     case getClasses(filters: ClassFilters?)
     case getClassDetails(id: String)
+    case registerDevice
+    case getNotificationHistory
+    case markNotificationRead(id: String)
+    case getNotificationPreferences
+    case updateNotificationPreferences
 
     // Groups
     case getGroups(filters: GroupFilters?)
@@ -44,38 +49,26 @@ enum APIEndpoint {
             return "/api/v1/classes"
         case .getClassDetails(let id):
             return "/api/v1/classes/\(id)"
-        case .getGroups:
-            return "/api/v1/groups"
-        case .getGroupDetails(let id):
-            return "/api/v1/groups/\(id)"
-        case .createGroup:
-            return "/api/v1/groups"
-        case .joinGroup(let id):
-            return "/api/v1/groups/\(id)/join"
-        case .leaveGroup(let id):
-            return "/api/v1/groups/\(id)/leave"
-        case .getGroupMembers(let id):
-            return "/api/v1/groups/\(id)/members"
-        case .inviteMember(let groupId):
-            return "/api/v1/groups/\(groupId)/invite"
-        case .getGroupActivities(let groupId):
-            return "/api/v1/groups/\(groupId)/activities"
-        case .getActivityDetails(let groupId, let activityId):
-            return "/api/v1/groups/\(groupId)/activities/\(activityId)"
-        case .createActivity(let groupId):
-            return "/api/v1/groups/\(groupId)/activities"
-        case .rsvpActivity(let groupId, let activityId):
-            return "/api/v1/groups/\(groupId)/activities/\(activityId)/rsvp"
+        case .registerDevice:
+            return "/api/v1/notifications/register-device"
+        case .getNotificationHistory:
+            return "/api/v1/notifications/history"
+        case .markNotificationRead(let id):
+            return "/api/v1/notifications/\(id)/mark-read"
+        case .getNotificationPreferences:
+            return "/api/v1/notifications/preferences"
+        case .updateNotificationPreferences:
+            return "/api/v1/notifications/preferences"
         }
     }
 
     var method: HTTPMethod {
         switch self {
-        case .register, .login, .createGroup, .joinGroup, .leaveGroup, .inviteMember, .createActivity, .rsvpActivity:
+        case .register, .login, .registerDevice, .markNotificationRead:
             return .post
-        case .getCurrentUser, .getClasses, .getClassDetails, .getGroups, .getGroupDetails, .getGroupMembers, .getGroupActivities, .getActivityDetails:
+        case .getCurrentUser, .getClasses, .getClassDetails, .getNotificationHistory, .getNotificationPreferences:
             return .get
-        case .updateCurrentUser:
+        case .updateCurrentUser, .updateNotificationPreferences:
             return .put
         }
     }
