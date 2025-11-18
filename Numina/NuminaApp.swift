@@ -17,6 +17,7 @@ struct NuminaApp: App {
     @StateObject private var profileViewModel: ProfileViewModel
     @StateObject private var feedViewModel: FeedViewModel
     @StateObject private var discoverViewModel: DiscoverViewModel
+    @StateObject private var bookingsViewModel: BookingsViewModel
 
     let modelContainer: ModelContainer
 
@@ -29,7 +30,10 @@ struct NuminaApp: App {
                 AvailabilitySlot.self,
                 Activity.self,
                 Comment.self,
-                SocialProfile.self
+                SocialProfile.self,
+                Booking.self,
+                ReminderPreferences.self,
+                AttendanceStats.self
             ])
             let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
             modelContainer = try ModelContainer(for: schema, configurations: [modelConfiguration])
@@ -42,6 +46,7 @@ struct NuminaApp: App {
         let userRepository = UserRepository(modelContext: modelContext)
         let classRepository = ClassRepository(modelContext: modelContext)
         let socialRepository = SocialRepository(modelContext: modelContext)
+        let bookingRepository = BookingRepository(modelContext: modelContext)
 
         // Initialize view models
         let authVM = AuthViewModel(userRepository: userRepository)
@@ -49,12 +54,14 @@ struct NuminaApp: App {
         let profileVM = ProfileViewModel(userRepository: userRepository)
         let feedVM = FeedViewModel(socialRepository: socialRepository)
         let discoverVM = DiscoverViewModel(socialRepository: socialRepository)
+        let bookingsVM = BookingsViewModel(bookingRepository: bookingRepository)
 
         _authViewModel = StateObject(wrappedValue: authVM)
         _classViewModel = StateObject(wrappedValue: classVM)
         _profileViewModel = StateObject(wrappedValue: profileVM)
         _feedViewModel = StateObject(wrappedValue: feedVM)
         _discoverViewModel = StateObject(wrappedValue: discoverVM)
+        _bookingsViewModel = StateObject(wrappedValue: bookingsVM)
     }
 
     var body: some Scene {
@@ -64,7 +71,8 @@ struct NuminaApp: App {
                 classViewModel: classViewModel,
                 profileViewModel: profileViewModel,
                 feedViewModel: feedViewModel,
-                discoverViewModel: discoverViewModel
+                discoverViewModel: discoverViewModel,
+                bookingsViewModel: bookingsViewModel
             )
             .modelContainer(modelContainer)
         }
@@ -77,6 +85,7 @@ struct ContentView: View {
     @ObservedObject var profileViewModel: ProfileViewModel
     @ObservedObject var feedViewModel: FeedViewModel
     @ObservedObject var discoverViewModel: DiscoverViewModel
+    @ObservedObject var bookingsViewModel: BookingsViewModel
 
     @State private var showingOnboarding = false
 
@@ -97,7 +106,8 @@ struct ContentView: View {
                             classViewModel: classViewModel,
                             profileViewModel: profileViewModel,
                             feedViewModel: feedViewModel,
-                            discoverViewModel: discoverViewModel
+                            discoverViewModel: discoverViewModel,
+                            bookingsViewModel: bookingsViewModel
                         )
                     }
                 } else {
@@ -106,7 +116,8 @@ struct ContentView: View {
                         classViewModel: classViewModel,
                         profileViewModel: profileViewModel,
                         feedViewModel: feedViewModel,
-                        discoverViewModel: discoverViewModel
+                        discoverViewModel: discoverViewModel,
+                        bookingsViewModel: bookingsViewModel
                     )
                 }
             } else {
@@ -129,6 +140,7 @@ struct MainTabView: View {
     @ObservedObject var profileViewModel: ProfileViewModel
     @ObservedObject var feedViewModel: FeedViewModel
     @ObservedObject var discoverViewModel: DiscoverViewModel
+    @ObservedObject var bookingsViewModel: BookingsViewModel
 
     var body: some View {
         TabView {
@@ -140,6 +152,11 @@ struct MainTabView: View {
             ClassListView(viewModel: classViewModel)
                 .tabItem {
                     Label("Classes", systemImage: "figure.run")
+                }
+
+            BookingsView(viewModel: bookingsViewModel)
+                .tabItem {
+                    Label("Bookings", systemImage: "calendar")
                 }
 
             DiscoverUsersView(viewModel: discoverViewModel)
@@ -206,6 +223,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         classViewModel: ClassViewModel(classRepository: ClassRepository()),
         profileViewModel: ProfileViewModel(userRepository: UserRepository()),
         feedViewModel: FeedViewModel(socialRepository: SocialRepository()),
-        discoverViewModel: DiscoverViewModel(socialRepository: SocialRepository())
+        discoverViewModel: DiscoverViewModel(socialRepository: SocialRepository()),
+        bookingsViewModel: BookingsViewModel(bookingRepository: BookingRepository())
     )
 }

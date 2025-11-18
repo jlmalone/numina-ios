@@ -22,6 +22,19 @@ enum APIEndpoint {
     case getMyReviews
     case getPendingReviews
 
+    // Booking endpoints
+    case getBookings(upcoming: Bool?)
+    case createBooking
+    case updateBooking(id: String)
+    case markAttended(id: String)
+    case cancelBooking(id: String)
+    case getCalendarMonth(month: String)
+    case getCalendarExport
+    case getReminderPreferences
+    case updateReminderPreferences
+    case getAttendanceStats
+    case getStreak
+
     // Social endpoints
     case getFeed(page: Int, limit: Int)
     case followUser(userId: String)
@@ -49,6 +62,46 @@ enum APIEndpoint {
             return "/api/v1/classes"
         case .getClassDetails(let id):
             return "/api/v1/classes/\(id)"
+
+        // Review paths (already handled above, adding missing ones)
+        case .getReviews(let classId, _, _, _):
+            return "/api/v1/reviews/class/\(classId)"
+        case .createReview(let classId):
+            return "/api/v1/reviews/class/\(classId)"
+        case .updateReview(let reviewId):
+            return "/api/v1/reviews/\(reviewId)"
+        case .deleteReview(let reviewId):
+            return "/api/v1/reviews/\(reviewId)"
+        case .markReviewHelpful(let reviewId):
+            return "/api/v1/reviews/\(reviewId)/helpful"
+        case .getMyReviews:
+            return "/api/v1/reviews/my-reviews"
+        case .getPendingReviews:
+            return "/api/v1/reviews/pending"
+
+        // Booking paths
+        case .getBookings:
+            return "/api/v1/bookings"
+        case .createBooking:
+            return "/api/v1/bookings"
+        case .updateBooking(let id):
+            return "/api/v1/bookings/\(id)"
+        case .markAttended(let id):
+            return "/api/v1/bookings/\(id)/mark-attended"
+        case .cancelBooking(let id):
+            return "/api/v1/bookings/\(id)/cancel"
+        case .getCalendarMonth(let month):
+            return "/api/v1/calendar/month/\(month)"
+        case .getCalendarExport:
+            return "/api/v1/calendar/export"
+        case .getReminderPreferences:
+            return "/api/v1/bookings/reminder-preferences"
+        case .updateReminderPreferences:
+            return "/api/v1/bookings/reminder-preferences"
+        case .getAttendanceStats:
+            return "/api/v1/bookings/stats"
+        case .getStreak:
+            return "/api/v1/bookings/streak"
 
         // Social paths
         case .getFeed:
@@ -84,6 +137,16 @@ enum APIEndpoint {
             return .get
         case .updateCurrentUser, .updateReview:
             return .put
+        case .deleteReview:
+            return .delete
+
+        // Booking methods
+        case .getBookings, .getCalendarMonth, .getCalendarExport, .getReminderPreferences, .getAttendanceStats, .getStreak:
+            return .get
+        case .createBooking, .markAttended, .cancelBooking:
+            return .post
+        case .updateBooking, .updateReminderPreferences:
+            return .put
 
         // Social methods
         case .getFeed, .discoverUsers, .getUserProfile, .getActivityComments, .getFollowers, .getFollowing:
@@ -106,6 +169,23 @@ enum APIEndpoint {
             ]
         case .discoverUsers(let filters):
             return filters?.toQueryItems()
+        case .getBookings(let upcoming):
+            if let upcoming = upcoming {
+                return [URLQueryItem(name: "upcoming", value: String(upcoming))]
+            }
+            return nil
+        case .getReviews(_, let sort, let page, let limit):
+            var items: [URLQueryItem] = []
+            if let sort = sort {
+                items.append(URLQueryItem(name: "sort", value: sort))
+            }
+            if let page = page {
+                items.append(URLQueryItem(name: "page", value: String(page)))
+            }
+            if let limit = limit {
+                items.append(URLQueryItem(name: "limit", value: String(limit)))
+            }
+            return items.isEmpty ? nil : items
         default:
             return nil
         }
