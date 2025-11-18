@@ -15,8 +15,8 @@ struct NuminaApp: App {
     @StateObject private var authViewModel: AuthViewModel
     @StateObject private var classViewModel: ClassViewModel
     @StateObject private var profileViewModel: ProfileViewModel
-    @StateObject private var notificationService: NotificationService
-    @StateObject private var notificationsViewModel: NotificationsViewModel
+    @StateObject private var feedViewModel: FeedViewModel
+    @StateObject private var discoverViewModel: DiscoverViewModel
 
     let modelContainer: ModelContainer
 
@@ -27,7 +27,9 @@ struct NuminaApp: App {
                 User.self,
                 FitnessClass.self,
                 AvailabilitySlot.self,
-                AppNotification.self
+                Activity.self,
+                Comment.self,
+                SocialProfile.self
             ])
             let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
             modelContainer = try ModelContainer(for: schema, configurations: [modelConfiguration])
@@ -39,23 +41,20 @@ struct NuminaApp: App {
         let modelContext = ModelContext(modelContainer)
         let userRepository = UserRepository(modelContext: modelContext)
         let classRepository = ClassRepository(modelContext: modelContext)
-        let groupRepository = GroupRepository(modelContext: modelContext)
+        let socialRepository = SocialRepository(modelContext: modelContext)
 
         // Initialize view models
         let authVM = AuthViewModel(userRepository: userRepository)
         let classVM = ClassViewModel(classRepository: classRepository)
         let profileVM = ProfileViewModel(userRepository: userRepository)
-        let notificationSvc = NotificationService(modelContext: modelContext)
-        let notificationsVM = NotificationsViewModel(modelContext: modelContext)
+        let feedVM = FeedViewModel(socialRepository: socialRepository)
+        let discoverVM = DiscoverViewModel(socialRepository: socialRepository)
 
         _authViewModel = StateObject(wrappedValue: authVM)
         _classViewModel = StateObject(wrappedValue: classVM)
         _profileViewModel = StateObject(wrappedValue: profileVM)
-        _notificationService = StateObject(wrappedValue: notificationSvc)
-        _notificationsViewModel = StateObject(wrappedValue: notificationsVM)
-
-        // Set notification service in app delegate
-        AppDelegate.notificationService = notificationSvc
+        _feedViewModel = StateObject(wrappedValue: feedVM)
+        _discoverViewModel = StateObject(wrappedValue: discoverVM)
     }
 
     var body: some Scene {
@@ -64,8 +63,8 @@ struct NuminaApp: App {
                 authViewModel: authViewModel,
                 classViewModel: classViewModel,
                 profileViewModel: profileViewModel,
-                notificationService: notificationService,
-                notificationsViewModel: notificationsViewModel
+                feedViewModel: feedViewModel,
+                discoverViewModel: discoverViewModel
             )
             .modelContainer(modelContainer)
         }
@@ -76,8 +75,8 @@ struct ContentView: View {
     @ObservedObject var authViewModel: AuthViewModel
     @ObservedObject var classViewModel: ClassViewModel
     @ObservedObject var profileViewModel: ProfileViewModel
-    @ObservedObject var notificationService: NotificationService
-    @ObservedObject var notificationsViewModel: NotificationsViewModel
+    @ObservedObject var feedViewModel: FeedViewModel
+    @ObservedObject var discoverViewModel: DiscoverViewModel
 
     @State private var showingOnboarding = false
 
@@ -97,8 +96,8 @@ struct ContentView: View {
                             authViewModel: authViewModel,
                             classViewModel: classViewModel,
                             profileViewModel: profileViewModel,
-                            notificationService: notificationService,
-                            notificationsViewModel: notificationsViewModel
+                            feedViewModel: feedViewModel,
+                            discoverViewModel: discoverViewModel
                         )
                     }
                 } else {
@@ -106,8 +105,8 @@ struct ContentView: View {
                         authViewModel: authViewModel,
                         classViewModel: classViewModel,
                         profileViewModel: profileViewModel,
-                        notificationService: notificationService,
-                        notificationsViewModel: notificationsViewModel
+                        feedViewModel: feedViewModel,
+                        discoverViewModel: discoverViewModel
                     )
                 }
             } else {
@@ -128,14 +127,24 @@ struct MainTabView: View {
     @ObservedObject var authViewModel: AuthViewModel
     @ObservedObject var classViewModel: ClassViewModel
     @ObservedObject var profileViewModel: ProfileViewModel
-    @ObservedObject var notificationService: NotificationService
-    @ObservedObject var notificationsViewModel: NotificationsViewModel
+    @ObservedObject var feedViewModel: FeedViewModel
+    @ObservedObject var discoverViewModel: DiscoverViewModel
 
     var body: some View {
         TabView {
+            FeedView(viewModel: feedViewModel)
+                .tabItem {
+                    Label("Feed", systemImage: "newspaper.fill")
+                }
+
             ClassListView(viewModel: classViewModel)
                 .tabItem {
-                    Label("Discover", systemImage: "magnifyingglass")
+                    Label("Classes", systemImage: "figure.run")
+                }
+
+            DiscoverUsersView(viewModel: discoverViewModel)
+                .tabItem {
+                    Label("Discover", systemImage: "person.2.fill")
                 }
 
             NotificationsView(
@@ -196,7 +205,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         authViewModel: AuthViewModel(userRepository: UserRepository()),
         classViewModel: ClassViewModel(classRepository: ClassRepository()),
         profileViewModel: ProfileViewModel(userRepository: UserRepository()),
-        notificationService: NotificationService(modelContext: modelContext),
-        notificationsViewModel: NotificationsViewModel(modelContext: modelContext)
+        feedViewModel: FeedViewModel(socialRepository: SocialRepository()),
+        discoverViewModel: DiscoverViewModel(socialRepository: SocialRepository())
     )
 }
