@@ -1,0 +1,1 @@
+fitness,classes,workout,gym,yoga,crossfit,social,community,health

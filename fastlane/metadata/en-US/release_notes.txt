@@ -1,0 +1,6 @@
+New in this version:
+- Find and book fitness classes nearby
+- Connect with other fitness enthusiasts
+- Join fitness groups and activities
+- Real-time messaging
+- Track your fitness journey

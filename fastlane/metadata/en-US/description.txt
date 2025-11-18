@@ -1,0 +1,20 @@
+Numina - Your Fitness Social Network
+
+Discover, book, and attend fitness classes in your area while connecting with a community of like-minded fitness enthusiasts.
+
+FEATURES:
+• Browse thousands of fitness classes from top providers
+• Get personalized class recommendations based on your interests
+• Book classes directly through provider platforms
+• Join fitness groups and coordinate activities
+• Real-time messaging with other members
+• Track your bookings and attendance
+• Share your fitness journey and achievements
+• Receive push notifications for group activities and messages
+
+SUPPORTED ACTIVITIES:
+Yoga, CrossFit, Running, Cycling, Dance, Martial Arts, Swimming, Hiking, Climbing, and more!
+
+Whether you're a beginner or an experienced athlete, Numina helps you find the perfect class and the right community to support your fitness goals.
+
+Download Numina today and start your fitness journey!
