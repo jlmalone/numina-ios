@@ -17,18 +17,32 @@ struct MyReviewsView: View {
         ))
     }
 
+    @ObservedObject private var networkMonitor = NetworkMonitor.shared
+
     var body: some View {
-        Group {
-            if viewModel.isLoading && viewModel.reviews.isEmpty {
-                LoadingView()
-            } else if let errorMessage = viewModel.errorMessage, viewModel.reviews.isEmpty {
-                ErrorView(message: errorMessage, retryAction: {
-                    Task {
-                        await viewModel.loadMyReviews()
+        VStack(spacing: 0) {
+            OfflineBanner()
+
+            Group {
+                if viewModel.isLoading && viewModel.reviews.isEmpty {
+                    skeletonLoadingView
+                } else if let errorMessage = viewModel.errorMessage, viewModel.reviews.isEmpty {
+                    if !networkMonitor.isConnected {
+                        NetworkErrorView {
+                            Task {
+                                await viewModel.loadMyReviews()
+                            }
+                        }
+                    } else {
+                        ErrorView(message: errorMessage, retryAction: {
+                            Task {
+                                await viewModel.loadMyReviews()
+                            }
+                        })
                     }
-                })
-            } else {
-                content
+                } else {
+                    content
+                }
             }
         }
         .navigationTitle("My Reviews")
@@ -36,11 +50,16 @@ struct MyReviewsView: View {
             await viewModel.loadMyReviews()
         }
         .refreshable {
+            HapticFeedback.shared.refreshStart()
             await viewModel.refreshReviews()
+            HapticFeedback.shared.refreshComplete()
         }
         .alert("Delete Review", isPresented: $viewModel.showDeleteConfirmation) {
-            Button("Cancel", role: .cancel) {}
+            Button("Cancel", role: .cancel) {
+                HapticFeedback.shared.buttonPress()
+            }
             Button("Delete", role: .destructive) {
+                HapticFeedback.shared.deletion()
                 Task {
                     await viewModel.deleteReview()
                 }
@@ -48,6 +67,18 @@ struct MyReviewsView: View {
         } message: {
             Text("Are you sure you want to delete this review? This action cannot be undone.")
         }
+    }
+
+    private var skeletonLoadingView: some View {
+        ScrollView {
+            LazyVStack(spacing: 16) {
+                ForEach(0..<3, id: \.self) { _ in
+                    SkeletonReviewRow()
+                }
+            }
+            .padding(16)
+        }
+        .background(Color(uiColor: .systemGroupedBackground))
     }
 
     @ViewBuilder
@@ -124,6 +155,7 @@ struct MyReviewsView: View {
 
                 Menu {
                     Button(role: .destructive) {
+                        HapticFeedback.shared.warning()
                         viewModel.confirmDelete(review: review)
                     } label: {
                         Label("Delete", systemImage: "trash")
@@ -133,6 +165,7 @@ struct MyReviewsView: View {
                         .font(.title3)
                         .foregroundStyle(.secondary)
                 }
+                .accessibilityLabel("Review options")
             }
 
             Text(review.reviewText)

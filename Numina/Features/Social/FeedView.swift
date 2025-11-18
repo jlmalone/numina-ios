@@ -10,22 +10,35 @@ import SwiftUI
 struct FeedView: View {
     @StateObject var viewModel: FeedViewModel
     @State private var selectedActivity: Activity?
+    @ObservedObject private var networkMonitor = NetworkMonitor.shared
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                if viewModel.isLoading && viewModel.activities.isEmpty {
-                    LoadingView()
-                } else if let errorMessage = viewModel.errorMessage, viewModel.activities.isEmpty {
-                    ErrorView(message: errorMessage) {
-                        Task {
-                            await viewModel.loadFeed()
+            VStack(spacing: 0) {
+                OfflineBanner()
+
+                ZStack {
+                    if viewModel.isLoading && viewModel.activities.isEmpty {
+                        skeletonLoadingView
+                    } else if let errorMessage = viewModel.errorMessage, viewModel.activities.isEmpty {
+                        if !networkMonitor.isConnected {
+                            NetworkErrorView {
+                                Task {
+                                    await viewModel.loadFeed()
+                                }
+                            }
+                        } else {
+                            ErrorView(message: errorMessage) {
+                                Task {
+                                    await viewModel.loadFeed()
+                                }
+                            }
                         }
+                    } else if viewModel.activities.isEmpty {
+                        EmptyStateView.noActivities()
+                    } else {
+                        feedContent
                     }
-                } else if viewModel.activities.isEmpty {
-                    EmptyFeedView()
-                } else {
-                    feedContent
                 }
             }
             .navigationTitle("Activity Feed")
@@ -50,18 +63,22 @@ struct FeedView: View {
                     ActivityFeedItem(
                         activity: activity,
                         onLike: {
+                            HapticFeedback.shared.favorite()
                             Task {
                                 await viewModel.toggleLike(activity: activity)
                             }
                         },
                         onComment: {
+                            HapticFeedback.shared.light()
                             selectedActivity = activity
                         }
                     )
                     .onTapGesture {
+                        HapticFeedback.shared.light()
                         selectedActivity = activity
                     }
                     .padding(.horizontal)
+                    .transition(.opacity.combined(with: .scale))
 
                     // Load more trigger
                     if activity.id == viewModel.activities.last?.id {
@@ -83,27 +100,22 @@ struct FeedView: View {
             .padding(.vertical)
         }
         .refreshable {
+            HapticFeedback.shared.refreshStart()
             await viewModel.refreshFeed()
+            HapticFeedback.shared.refreshComplete()
         }
+        .animation(.easeInOut(duration: 0.3), value: viewModel.activities.count)
     }
-}
 
-struct EmptyFeedView: View {
-    var body: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "figure.wave.circle")
-                .font(.system(size: 60))
-                .foregroundColor(.orange.opacity(0.5))
-
-            Text("No Activity Yet")
-                .font(.title3.weight(.medium))
-
-            Text("Start following users to see their activities")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
+    private var skeletonLoadingView: some View {
+        ScrollView {
+            LazyVStack(spacing: 16) {
+                ForEach(0..<5, id: \.self) { _ in
+                    SkeletonActivityItem()
+                }
+            }
+            .padding(16)
         }
-        .padding()
     }
 }
 

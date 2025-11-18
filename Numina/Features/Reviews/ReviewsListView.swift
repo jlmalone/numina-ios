@@ -11,6 +11,7 @@ import SwiftData
 struct ReviewsListView: View {
     @StateObject private var viewModel: ReviewsViewModel
     @State private var showingWriteReview = false
+    @ObservedObject private var networkMonitor = NetworkMonitor.shared
 
     init(classId: String, modelContext: ModelContext) {
         _viewModel = StateObject(wrappedValue: ReviewsViewModel(
@@ -20,17 +21,29 @@ struct ReviewsListView: View {
     }
 
     var body: some View {
-        Group {
-            if viewModel.isLoading && viewModel.reviews.isEmpty {
-                LoadingView()
-            } else if let errorMessage = viewModel.errorMessage, viewModel.reviews.isEmpty {
-                ErrorView(message: errorMessage, retryAction: {
-                    Task {
-                        await viewModel.loadReviews()
+        VStack(spacing: 0) {
+            OfflineBanner()
+
+            Group {
+                if viewModel.isLoading && viewModel.reviews.isEmpty {
+                    skeletonLoadingView
+                } else if let errorMessage = viewModel.errorMessage, viewModel.reviews.isEmpty {
+                    if !networkMonitor.isConnected {
+                        NetworkErrorView {
+                            Task {
+                                await viewModel.loadReviews()
+                            }
+                        }
+                    } else {
+                        ErrorView(message: errorMessage, retryAction: {
+                            Task {
+                                await viewModel.loadReviews()
+                            }
+                        })
                     }
-                })
-            } else {
-                content
+                } else {
+                    content
+                }
             }
         }
         .navigationTitle("Reviews")
@@ -38,8 +51,11 @@ struct ReviewsListView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button("Write Review") {
+                    HapticFeedback.shared.buttonPress()
                     showingWriteReview = true
                 }
+                .accessibilityLabel("Write a review")
+                .accessibilityHint("Opens form to write a review for this class")
             }
         }
         .sheet(isPresented: $showingWriteReview) {
@@ -53,8 +69,22 @@ struct ReviewsListView: View {
             await viewModel.loadReviews()
         }
         .refreshable {
+            HapticFeedback.shared.refreshStart()
             await viewModel.refreshReviews()
+            HapticFeedback.shared.refreshComplete()
         }
+    }
+
+    private var skeletonLoadingView: some View {
+        ScrollView {
+            LazyVStack(spacing: 16) {
+                ForEach(0..<4, id: \.self) { _ in
+                    SkeletonReviewRow()
+                }
+            }
+            .padding(16)
+        }
+        .background(Color(uiColor: .systemGroupedBackground))
     }
 
     @ViewBuilder
@@ -122,6 +152,7 @@ struct ReviewsListView: View {
             HStack(spacing: 8) {
                 ForEach(ReviewSortOption.allCases) { option in
                     Button {
+                        HapticFeedback.shared.selection()
                         Task {
                             await viewModel.changeSort(option)
                         }
@@ -136,6 +167,7 @@ struct ReviewsListView: View {
                             )
                             .foregroundStyle(viewModel.selectedSort == option ? .white : .primary)
                     }
+                    .accessibilityLabel("Sort by \(option.rawValue)")
                 }
             }
         }

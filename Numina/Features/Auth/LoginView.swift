@@ -79,8 +79,14 @@ struct LoginView: View {
 
                 // Login Button
                 Button(action: {
+                    HapticFeedback.shared.formSubmit()
                     Task {
                         await viewModel.login(email: email, password: password)
+                        if viewModel.isAuthenticated {
+                            HapticFeedback.shared.actionSuccess()
+                        } else if viewModel.errorMessage != nil {
+                            HapticFeedback.shared.actionFailed()
+                        }
                     }
                 }) {
                     if viewModel.isLoading {
@@ -104,6 +110,8 @@ struct LoginView: View {
                 .cornerRadius(12)
                 .disabled(viewModel.isLoading || email.isEmpty || password.isEmpty)
                 .opacity((viewModel.isLoading || email.isEmpty || password.isEmpty) ? 0.6 : 1.0)
+                .accessibilityLabel("Log in")
+                .accessibilityHint(email.isEmpty || password.isEmpty ? "Email and password required" : "Double tap to log in")
 
                 Spacer()
 
@@ -113,6 +121,7 @@ struct LoginView: View {
                         .foregroundColor(.secondary)
 
                     Button("Sign Up") {
+                        HapticFeedback.shared.buttonPress()
                         showingRegister = true
                     }
                     .foregroundColor(.orange)

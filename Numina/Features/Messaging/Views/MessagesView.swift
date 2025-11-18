@@ -11,35 +11,52 @@ struct MessagesView: View {
     @StateObject var viewModel: MessagesViewModel
     @State private var showingNewChat = false
     @State private var selectedConversation: Conversation?
+    @ObservedObject private var networkMonitor = NetworkMonitor.shared
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                if viewModel.isLoading && viewModel.conversations.isEmpty {
-                    LoadingView()
-                } else if let errorMessage = viewModel.errorMessage, viewModel.conversations.isEmpty {
-                    ErrorView(message: errorMessage) {
-                        Task {
-                            await viewModel.loadConversations()
+            VStack(spacing: 0) {
+                OfflineBanner()
+
+                ZStack {
+                    if viewModel.isLoading && viewModel.conversations.isEmpty {
+                        skeletonLoadingView
+                    } else if let errorMessage = viewModel.errorMessage, viewModel.conversations.isEmpty {
+                        if !networkMonitor.isConnected {
+                            NetworkErrorView {
+                                Task {
+                                    await viewModel.loadConversations()
+                                }
+                            }
+                        } else {
+                            ErrorView(message: errorMessage) {
+                                Task {
+                                    await viewModel.loadConversations()
+                                }
+                            }
                         }
+                    } else if viewModel.conversations.isEmpty {
+                        EmptyStateView.noMessages {
+                            HapticFeedback.shared.buttonPress()
+                            showingNewChat = true
+                        }
+                    } else {
+                        conversationListContent
                     }
-                } else if viewModel.conversations.isEmpty {
-                    EmptyMessagesView(onStartChat: {
-                        showingNewChat = true
-                    })
-                } else {
-                    conversationListContent
                 }
             }
             .navigationTitle("Messages")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
+                        HapticFeedback.shared.buttonPress()
                         showingNewChat = true
                     }) {
                         Image(systemName: "square.and.pencil")
                             .foregroundColor(.orange)
                     }
+                    .accessibilityLabel("New message")
+                    .accessibilityHint("Start a new conversation")
                 }
             }
             .searchable(text: $viewModel.searchQuery, prompt: "Search conversations")
@@ -73,10 +90,12 @@ struct MessagesView: View {
             ForEach(viewModel.filteredConversations, id: \.id) { conversation in
                 ConversationRow(conversation: conversation)
                     .onTapGesture {
+                        HapticFeedback.shared.light()
                         selectedConversation = conversation
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                         Button(role: .destructive) {
+                            HapticFeedback.shared.deletion()
                             Task {
                                 await viewModel.deleteConversation(id: conversation.id)
                             }
@@ -86,6 +105,7 @@ struct MessagesView: View {
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         Button {
+                            HapticFeedback.shared.light()
                             viewModel.archiveConversation(id: conversation.id)
                         } label: {
                             Label("Archive", systemImage: "archivebox")
@@ -93,12 +113,16 @@ struct MessagesView: View {
                         .tint(.orange)
                     }
                     .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                    .transition(.opacity.combined(with: .slide))
             }
         }
         .listStyle(.plain)
         .refreshable {
+            HapticFeedback.shared.refreshStart()
             await viewModel.refreshConversations()
+            HapticFeedback.shared.refreshComplete()
         }
+        .animation(.easeInOut(duration: 0.3), value: viewModel.filteredConversations.count)
         .overlay(alignment: .topTrailing) {
             // Unread count badge
             if viewModel.totalUnreadCount > 0 {
@@ -116,7 +140,19 @@ struct MessagesView: View {
                     )
                     .cornerRadius(12)
                     .padding()
+                    .accessibilityLabel("\(viewModel.totalUnreadCount) unread messages")
             }
+        }
+    }
+
+    private var skeletonLoadingView: some View {
+        ScrollView {
+            LazyVStack(spacing: 12) {
+                ForEach(0..<8, id: \.self) { _ in
+                    SkeletonMessageRow()
+                }
+            }
+            .padding(16)
         }
     }
 }
